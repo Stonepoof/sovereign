@@ -4,7 +4,7 @@
 
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
-import { getAIConfig, isValidApiKey } from '@/config/ai-config';
+import { getAIConfig, isValidApiKey } from '../../config/ai-config';
 
 // Re-export types
 export type AITier = 'template' | 'local' | 'budget' | 'premium';

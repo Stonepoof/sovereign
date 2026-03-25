@@ -5,17 +5,8 @@
  * Supports danger/warning/safe visual states and smooth value transitions.
  */
 
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withRepeat,
-  withSequence,
-  Easing,
-  cancelAnimation,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import type { MeterName } from '../../types';
 import { colors } from '../../theme/colors';
 import { getMeterZone } from '../../data/meters';
@@ -61,45 +52,73 @@ export function MeterBar({
   const zone = getMeterZone(value);
   const meterColor = color ?? (colors[name] || colors.textPrimary);
 
-  // Animated bar width
-  const barWidth = useSharedValue(value);
+  // Animated bar width (0-100 percentage)
+  const barWidth = useRef(new Animated.Value(value)).current;
   // Danger pulse opacity
-  const pulseOpacity = useSharedValue(1);
+  const pulseOpacity = useRef(new Animated.Value(1)).current;
+  // Ref to store the pulse animation so we can stop it
+  const pulseAnimRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
-    barWidth.value = withTiming(value, {
+    Animated.timing(barWidth, {
+      toValue: value,
       duration: 300,
       easing: Easing.out(Easing.quad),
-    });
+      useNativeDriver: false,
+    }).start();
   }, [value]);
 
   // Danger pulse animation
   useEffect(() => {
     if (zone === 'danger') {
-      pulseOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.6, { duration: 500, easing: Easing.inOut(Easing.ease) }),
-          withTiming(1.0, { duration: 500, easing: Easing.inOut(Easing.ease) }),
-        ),
-        -1, // infinite
-        false,
+      const pulseAnim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseOpacity, {
+            toValue: 0.6,
+            duration: 500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          }),
+          Animated.timing(pulseOpacity, {
+            toValue: 1.0,
+            duration: 500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          }),
+        ]),
       );
+      pulseAnimRef.current = pulseAnim;
+      pulseAnim.start();
     } else {
-      cancelAnimation(pulseOpacity);
-      pulseOpacity.value = withTiming(1, { duration: 150 });
+      if (pulseAnimRef.current) {
+        pulseAnimRef.current.stop();
+        pulseAnimRef.current = null;
+      }
+      Animated.timing(pulseOpacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: false,
+      }).start();
     }
+
+    return () => {
+      if (pulseAnimRef.current) {
+        pulseAnimRef.current.stop();
+        pulseAnimRef.current = null;
+      }
+    };
   }, [zone]);
 
   // Determine bar fill color based on zone
   const fillColor = zone === 'danger' ? DANGER_COLOR : zone === 'warning' ? WARNING_COLOR : meterColor;
 
   const barHeight = compact ? COMPACT_BAR_HEIGHT : EXPANDED_BAR_HEIGHT;
-  const barMaxWidth = compact ? COMPACT_BAR_WIDTH : undefined; // full width in expanded
 
-  const animatedFillStyle = useAnimatedStyle(() => ({
-    width: `${barWidth.value}%`,
-    opacity: pulseOpacity.value,
-  }));
+  // Interpolate barWidth (0-100) to a percentage string via width style
+  const animatedWidth = barWidth.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
 
   return (
     <View style={compact ? styles.containerCompact : styles.containerExpanded}>
@@ -131,8 +150,9 @@ export function MeterBar({
               height: barHeight,
               borderRadius: barHeight / 2,
               backgroundColor: fillColor,
+              width: animatedWidth,
+              opacity: pulseOpacity,
             },
-            animatedFillStyle,
           ]}
         />
       </View>

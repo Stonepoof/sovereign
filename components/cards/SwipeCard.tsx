@@ -1,21 +1,18 @@
 /**
- * Sovereign — SwipeCard Component
+ * Sovereign -- SwipeCard Component
  *
  * The core game interaction component. Renders a card with agency badge,
  * portrait, title, body text, and directional options. The entire card
  * is swipeable in up to 4 directions to make decisions.
  *
- * Uses useSwipeGesture for pan interaction, resolveText for dynamic text,
- * and GestureDetector + Animated.View for the physics-driven UI.
+ * Uses useSwipeGesture for pan interaction via PanResponder and
+ * standard Animated.View for the physics-driven UI.
  *
- * @see SOV_PRD_03_CORE_GAMEPLAY section 3 — card layout and swipe mechanics
+ * @see SOV_PRD_03_CORE_GAMEPLAY section 3 -- card layout and swipe mechanics
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import Animated from 'react-native-reanimated';
-import { GestureDetector } from 'react-native-gesture-handler';
-import { useDerivedValue, useAnimatedStyle, interpolateColor } from 'react-native-reanimated';
+import { StyleSheet, View, Text, Animated } from 'react-native';
 
 import type { Card, Direction, TextContext, AgencyType, MeterEffects } from '../../types';
 import { AGENCY_COLORS } from '../../types';
@@ -207,84 +204,58 @@ export function SwipeCard({ card, onCommit, textContext }: SwipeCardProps) {
   );
 
   // Swipe gesture hook
-  const { gesture, animatedStyle, activeDirection } = useSwipeGesture({
+  const { panResponder, animatedStyle, activeDirection } = useSwipeGesture({
     onCommit,
     isOptionAvailable,
     enabled: true,
   });
 
-  // Animated border color based on active swipe direction
-  const borderStyle = useAnimatedStyle(() => {
-    const dir = activeDirection.value;
-    if (!dir) {
-      return { borderColor: colors.cardBorder };
-    }
-
-    const targetColor = DIRECTION_COLORS[dir] || colors.cardBorder;
-    return { borderColor: targetColor };
-  });
-
-  // Animated glow overlay based on active direction
-  const glowStyle = useAnimatedStyle(() => {
-    const dir = activeDirection.value;
-    if (!dir) {
-      return { opacity: 0 };
-    }
-    return { opacity: 0.15 };
-  });
-
-  // Read the active direction on JS thread for option highlighting
-  // We use useDerivedValue to create a shared value we can read
-  const activeDir = useDerivedValue(() => activeDirection.value);
-
   return (
-    <GestureDetector gesture={gesture}>
-      <Animated.View style={[styles.cardContainer, animatedStyle]}>
-        <Animated.View style={[styles.card, borderStyle]}>
-          {/* Directional glow overlay */}
-          <Animated.View style={[styles.glowOverlay, glowStyle]} />
+    <Animated.View
+      style={[styles.cardContainer, animatedStyle]}
+      {...panResponder.panHandlers}
+    >
+      <View style={[styles.card]}>
+        {/* Agency badge */}
+        <AgencyBadge agency={card.agency} />
 
-          {/* Agency badge */}
-          <AgencyBadge agency={card.agency} />
+        {/* Portrait */}
+        <Portrait emoji={resolved.portrait} agency={card.agency} />
 
-          {/* Portrait */}
-          <Portrait emoji={resolved.portrait} agency={card.agency} />
+        {/* NPC name (if present) */}
+        {resolved.npc && <Text style={styles.npcName}>{resolved.npc}</Text>}
 
-          {/* NPC name (if present) */}
-          {resolved.npc && <Text style={styles.npcName}>{resolved.npc}</Text>}
+        {/* Title */}
+        <Text style={styles.title} numberOfLines={2}>
+          {resolved.title}
+        </Text>
 
-          {/* Title */}
-          <Text style={styles.title} numberOfLines={2}>
-            {resolved.title}
-          </Text>
+        {/* Body text */}
+        <Text style={styles.bodyText} numberOfLines={4}>
+          {resolved.text}
+        </Text>
 
-          {/* Body text */}
-          <Text style={styles.bodyText} numberOfLines={4}>
-            {resolved.text}
-          </Text>
+        {/* Options row */}
+        <View style={styles.optionsContainer}>
+          {DIRECTION_ORDER.map((dir) => {
+            const resolvedOpt = resolvedOptionMap[dir];
+            if (!resolvedOpt) return null;
 
-          {/* Options row */}
-          <View style={styles.optionsContainer}>
-            {DIRECTION_ORDER.map((dir) => {
-              const resolvedOpt = resolvedOptionMap[dir];
-              if (!resolvedOpt) return null;
+            const originalOpt = optionMap[dir];
 
-              const originalOpt = optionMap[dir];
-
-              return (
-                <OptionItem
-                  key={dir}
-                  option={resolvedOpt}
-                  direction={dir}
-                  meters={originalOpt?.meters}
-                  isActive={false}
-                />
-              );
-            })}
-          </View>
-        </Animated.View>
-      </Animated.View>
-    </GestureDetector>
+            return (
+              <OptionItem
+                key={dir}
+                option={resolvedOpt}
+                direction={dir}
+                meters={originalOpt?.meters}
+                isActive={false}
+              />
+            );
+          })}
+        </View>
+      </View>
+    </Animated.View>
   );
 }
 
@@ -313,12 +284,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
-  },
-
-  glowOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: borderRadius.xl,
-    opacity: 0,
   },
 
   // Agency badge

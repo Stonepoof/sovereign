@@ -7,16 +7,7 @@
  */
 
 import React, { useEffect, useRef, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withRepeat,
-  withSequence,
-  Easing,
-  cancelAnimation,
-} from 'react-native-reanimated';
+import { View, Text, Pressable, StyleSheet, Animated, Easing } from 'react-native';
 import type { DieType, DiceResult } from '../../types';
 import { useDiceRoll } from '../../hooks/useDiceRoll';
 import { colors } from '../../theme/colors';
@@ -70,19 +61,29 @@ export function DiceOverlay({ visible, die, modifier, onResult }: DiceOverlayPro
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Shake animation for rolling state
-  const shakeX = useSharedValue(0);
+  const shakeX = useRef(new Animated.Value(0)).current;
   // Overlay fade
-  const overlayOpacity = useSharedValue(0);
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
   // Result glow
-  const glowOpacity = useSharedValue(0);
+  const glowOpacity = useRef(new Animated.Value(0)).current;
+  // Ref to store the shake animation so we can stop it
+  const shakeAnimRef = useRef<Animated.CompositeAnimation | null>(null);
 
   // Handle visibility changes
   useEffect(() => {
     if (visible) {
-      overlayOpacity.value = withTiming(1, { duration: 200 });
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
       reset();
     } else {
-      overlayOpacity.value = withTiming(0, { duration: 150 });
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: false,
+      }).start();
       cleanup();
     }
   }, [visible]);
@@ -90,27 +91,45 @@ export function DiceOverlay({ visible, die, modifier, onResult }: DiceOverlayPro
   // Shake during rolling
   useEffect(() => {
     if (phase === 'rolling') {
-      shakeX.value = withRepeat(
-        withSequence(
-          withTiming(-3, { duration: 30 }),
-          withTiming(3, { duration: 30 }),
-          withTiming(-2, { duration: 30 }),
-          withTiming(2, { duration: 30 }),
-          withTiming(0, { duration: 30 }),
-        ),
-        -1,
-        false,
+      const shakeAnim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(shakeX, { toValue: -3, duration: 30, useNativeDriver: false }),
+          Animated.timing(shakeX, { toValue: 3, duration: 30, useNativeDriver: false }),
+          Animated.timing(shakeX, { toValue: -2, duration: 30, useNativeDriver: false }),
+          Animated.timing(shakeX, { toValue: 2, duration: 30, useNativeDriver: false }),
+          Animated.timing(shakeX, { toValue: 0, duration: 30, useNativeDriver: false }),
+        ]),
       );
+      shakeAnimRef.current = shakeAnim;
+      shakeAnim.start();
     } else {
-      cancelAnimation(shakeX);
-      shakeX.value = withTiming(0, { duration: 50 });
+      if (shakeAnimRef.current) {
+        shakeAnimRef.current.stop();
+        shakeAnimRef.current = null;
+      }
+      Animated.timing(shakeX, {
+        toValue: 0,
+        duration: 50,
+        useNativeDriver: false,
+      }).start();
     }
+
+    return () => {
+      if (shakeAnimRef.current) {
+        shakeAnimRef.current.stop();
+        shakeAnimRef.current = null;
+      }
+    };
   }, [phase]);
 
   // Glow on result
   useEffect(() => {
     if (phase === 'result' && result) {
-      glowOpacity.value = withTiming(1, { duration: 300 });
+      Animated.timing(glowOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
 
       // Fire result callback
       onResult(result);
@@ -120,7 +139,11 @@ export function DiceOverlay({ visible, die, modifier, onResult }: DiceOverlayPro
         dismissTimer.current = null;
       }, AUTO_DISMISS_MS);
     } else {
-      glowOpacity.value = withTiming(0, { duration: 150 });
+      Animated.timing(glowOpacity, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: false,
+      }).start();
     }
   }, [phase, result]);
 
@@ -139,33 +162,20 @@ export function DiceOverlay({ visible, die, modifier, onResult }: DiceOverlayPro
     // Tap during result or rolling is a no-op (let animation play)
   }, [phase, die, modifier, startRoll]);
 
-  // Animated styles
-  const overlayAnimStyle = useAnimatedStyle(() => ({
-    opacity: overlayOpacity.value,
-  }));
-
-  const shakeStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shakeX.value }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }));
-
   if (!visible) return null;
 
   const isSuccess = result?.success ?? false;
   const isCritical = result?.critical ?? false;
 
   return (
-    <Animated.View style={[styles.overlay, overlayAnimStyle]}>
+    <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
       <Pressable style={styles.pressable} onPress={handlePress}>
         <View style={styles.content}>
           {/* Die type label */}
           <Text style={styles.dieLabel}>{DIE_LABELS[die]}</Text>
 
           {/* Die icon / number display */}
-          <Animated.View style={[styles.dieContainer, shakeStyle]}>
+          <Animated.View style={[styles.dieContainer, { transform: [{ translateX: shakeX }] }]}>
             {phase === 'waiting' ? (
               <Text style={styles.dieEmoji}>{DIE_EMOJI[die]}</Text>
             ) : (
@@ -212,7 +222,7 @@ export function DiceOverlay({ visible, die, modifier, onResult }: DiceOverlayPro
               </Text>
 
               {/* Success / Fail text */}
-              <Animated.View style={[styles.resultBadge, glowStyle]}>
+              <Animated.View style={[styles.resultBadge, { opacity: glowOpacity }]}>
                 <Text
                   style={[
                     styles.resultText,

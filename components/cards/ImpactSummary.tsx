@@ -11,9 +11,8 @@
  * @see SOV_PRD_03_CORE_GAMEPLAY -- impact summary specification
  */
 
-import React, { useMemo, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import React, { useMemo, useCallback, useEffect, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, Animated, Easing } from 'react-native';
 
 import type { Direction, DiceResult, MeterDelta } from '../../types';
 import { useAutoAdvance } from '../../hooks/useAutoAdvance';
@@ -103,9 +102,20 @@ export function ImpactSummary({
   const dirColor = DIRECTION_COLORS[direction];
   const arrow = DIRECTION_ARROWS[direction];
 
+  // Fade-in animation
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: false,
+    }).start();
+  }, []);
+
   return (
     <Pressable style={styles.container} onPress={handleTap}>
-      <Animated.View style={styles.content} entering={FadeIn.duration(400)}>
+      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         {/* Direction arrow */}
         <Text style={[styles.arrow, { color: dirColor }]}>{arrow}</Text>
 

@@ -20,6 +20,9 @@ export const VOICE_PROFILES: VoiceProfile[] = [
     rhythm: 'Measured, careful pauses',
     verbalTic: 'Always says "Sovereign"',
     hiddenTrait: 'Fear of irrelevance',
+    vocabulary: 'formal',
+    sentenceLength: 'long',
+    traits: ['calculating', 'traditional', 'guarded'],
   },
   {
     key: 'elder',
@@ -27,6 +30,9 @@ export const VOICE_PROFILES: VoiceProfile[] = [
     rhythm: 'Fragmented, desperate',
     verbalTic: 'Trails off mid-sentence',
     hiddenTrait: 'Exhaustion from years of petitioning',
+    vocabulary: 'plain',
+    sentenceLength: 'short',
+    traits: ['weary', 'sincere', 'desperate'],
   },
   {
     key: 'spy',
@@ -34,6 +40,9 @@ export const VOICE_PROFILES: VoiceProfile[] = [
     rhythm: 'Suggestive, incomplete',
     verbalTic: 'Never finishes a thought directly',
     hiddenTrait: 'Enjoys the game of secrets',
+    vocabulary: 'casual',
+    sentenceLength: 'medium',
+    traits: ['evasive', 'cunning', 'amused'],
   },
   {
     key: 'kira',
@@ -41,6 +50,9 @@ export const VOICE_PROFILES: VoiceProfile[] = [
     rhythm: 'Clipped, no wasted words',
     verbalTic: 'Uses "we" instead of "I"',
     hiddenTrait: 'Ambition masked as duty',
+    vocabulary: 'military',
+    sentenceLength: 'short',
+    traits: ['disciplined', 'blunt', 'driven'],
   },
   {
     key: 'elara',
@@ -48,6 +60,9 @@ export const VOICE_PROFILES: VoiceProfile[] = [
     rhythm: 'Flowing, intellectual',
     verbalTic: 'Asks questions she knows answers to',
     hiddenTrait: "Guilt about predecessor's death",
+    vocabulary: 'formal',
+    sentenceLength: 'medium',
+    traits: ['warm', 'wise', 'guarded'],
   },
   {
     key: 'voss',
@@ -55,6 +70,9 @@ export const VOICE_PROFILES: VoiceProfile[] = [
     rhythm: 'Persuasive, rhetorical',
     verbalTic: 'Frames everything as "the people want"',
     hiddenTrait: 'Deep cynicism about democracy',
+    vocabulary: 'political',
+    sentenceLength: 'long',
+    traits: ['charismatic', 'manipulative', 'cynical'],
   },
   {
     key: 'maren',
@@ -62,6 +80,9 @@ export const VOICE_PROFILES: VoiceProfile[] = [
     rhythm: 'Steady, measured',
     verbalTic: 'Quotes proverbs then apologizes for it',
     hiddenTrait: 'Private crisis of faith',
+    vocabulary: 'plain',
+    sentenceLength: 'medium',
+    traits: ['humble', 'steady', 'doubting'],
   },
 ];
 
@@ -81,6 +102,7 @@ export const NPCS: NPCDef[] = [
       'about her predecessor\'s death. She asks questions she already knows the answers to, ' +
       'guiding you toward conclusions she has already reached.',
     startingLoyalty: 50,
+    recruitWeek: 0,
     recruitedAt: 'Origin card 7 (if accepted)',
   },
   {
@@ -94,6 +116,7 @@ export const NPCS: NPCDef[] = [
       'though his true motivations are deeply cynical. He leads the Reform Coalition and ' +
       'sees you as a useful tool for his agenda.',
     startingLoyalty: 50,
+    recruitWeek: 0,
     recruitedAt: 'Origin card 7 (Reform Coalition)',
   },
   {
@@ -107,6 +130,7 @@ export const NPCS: NPCDef[] = [
       'sentences and uses "we" instead of "I" — masking personal ambition as collective duty. ' +
       'Haunted by PTSD from the border wars.',
     startingLoyalty: 50,
+    recruitWeek: 0,
     recruitedAt: 'Origin card 7 (Loyalist Guard)',
   },
   {
@@ -120,6 +144,7 @@ export const NPCS: NPCDef[] = [
       'She leads the People\'s Front but is privately wrestling with a crisis of faith. ' +
       'Her steady demeanor masks deep uncertainty.',
     startingLoyalty: 50,
+    recruitWeek: 0,
     recruitedAt: "Origin card 7 (People's Front)",
   },
   {
@@ -133,6 +158,7 @@ export const NPCS: NPCDef[] = [
       'working-class dialect. Rose to prominence during the Slums uprising. Deeply loyal ' +
       'to the people but struggles with institutional power.',
     startingLoyalty: 40,
+    recruitWeek: 8,
     recruitedAt: 'Slums Uprising card (if recruited)',
   },
   {
@@ -146,6 +172,7 @@ export const NPCS: NPCDef[] = [
       'himself in the corridors of power. Offers genuine loyalty without agenda, though ' +
       'his competence is untested.',
     startingLoyalty: 70,
+    recruitWeek: 4,
     recruitedAt: 'Old Friend card (if offered position)',
   },
 ];
@@ -164,6 +191,7 @@ export const LORD_ALDRIC: NPCDef = {
     'An aristocratic lord who always addresses you as "Sovereign." His measured speech ' +
     'and careful pauses hide a deep fear of irrelevance in the changing political landscape.',
   startingLoyalty: 45,
+  recruitWeek: 999,
   recruitedAt: 'Not recruitable — appears in petition and follow-up cards',
 };
 
@@ -178,6 +206,7 @@ export const VILLAGE_ELDER: NPCDef = {
     'rulers who never listen. Her desperate appeals carry the weight of communities ' +
     'that have been ignored for generations.',
   startingLoyalty: 30,
+  recruitWeek: 999,
   recruitedAt: 'Not recruitable — appears in petition cards',
 };
 
@@ -191,6 +220,7 @@ export const SPYMASTER: NPCDef = {
     'A hooded figure who never finishes a thought directly. Speaks in suggestions and ' +
     'implications, enjoying the game of secrets. Their true loyalty is always in question.',
   startingLoyalty: 35,
+  recruitWeek: 999,
   recruitedAt: 'Not recruitable — appears in interlude and investigation cards',
 };
 

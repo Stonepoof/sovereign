@@ -2,7 +2,7 @@
 // Priority: Local -> RunPod -> Mock
 // Uses local server for development, RunPod for production
 
-import { getAIConfig, isImageGenEnabled } from '@/config/ai-config';
+import { getAIConfig, isImageGenEnabled } from '../../config/ai-config';
 import { IRunPodClient, RunPodClient, MockRunPodClient } from './runpod-client';
 import { LocalImageClient } from './local-image-client';
 

@@ -8,12 +8,6 @@
 
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
 import { useMeterStore } from '../../stores';
 import { useGameStore } from '../../stores';
 import { METERS } from '../../data/meters';
@@ -58,16 +52,6 @@ export function MeterHeader({
       setInternalExpanded((prev) => !prev);
     }
   };
-
-  // Animated height transition
-  const animatedHeight = useSharedValue(isExpanded ? 1 : 0);
-
-  React.useEffect(() => {
-    animatedHeight.value = withTiming(isExpanded ? 1 : 0, {
-      duration: 200,
-      easing: Easing.inOut(Easing.ease),
-    });
-  }, [isExpanded]);
 
   return (
     <Pressable onPress={handleToggle} style={styles.wrapper}>

@@ -8,15 +8,8 @@
  * @see SOV_PRD_08_ONBOARDING -- progressive tab unlock
  */
 
-import React, { useEffect, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  Easing,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, Animated, Easing } from 'react-native';
 
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -43,33 +36,46 @@ const AUTO_DISMISS_MS = 2000;
 // ---------------------------------------------------------------------------
 
 export function UnlockOverlay({ tabName, icon, onDismiss }: UnlockOverlayProps) {
-  const translateY = useSharedValue(200);
-  const opacity = useSharedValue(0);
+  const translateY = useRef(new Animated.Value(200)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Slide up
-    translateY.value = withSpring(0, { damping: 14, stiffness: 120 });
-    opacity.value = withTiming(1, { duration: 300 });
+    // Slide up with spring
+    Animated.spring(translateY, {
+      toValue: 0,
+      damping: 14,
+      stiffness: 120,
+      useNativeDriver: false,
+    }).start();
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
 
     // Auto-dismiss
     const timer = setTimeout(() => {
-      translateY.value = withTiming(200, { duration: 300, easing: Easing.in(Easing.ease) });
-      opacity.value = withTiming(0, { duration: 300 });
+      Animated.timing(translateY, {
+        toValue: 200,
+        duration: 300,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: false,
+      }).start();
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
       setTimeout(onDismiss, 350);
     }, AUTO_DISMISS_MS);
 
     return () => clearTimeout(timer);
   }, []);
 
-  const containerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-    opacity: opacity.value,
-  }));
-
   return (
     <View style={styles.backdrop}>
       <Pressable style={styles.pressable} onPress={onDismiss}>
-        <Animated.View style={[styles.card, containerStyle]}>
+        <Animated.View style={[styles.card, { transform: [{ translateY }], opacity }]}>
           <Text style={styles.label}>UNLOCKED</Text>
           <View style={styles.row}>
             <Text style={styles.icon}>{icon}</Text>

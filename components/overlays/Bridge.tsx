@@ -8,17 +8,8 @@
  * @see SOV_PRD_08_ONBOARDING -- transition overlays between origin cards
  */
 
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  withSequence,
-  Easing,
-  runOnJS,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -49,29 +40,33 @@ const FADE_OUT_MS = 300;
 // ---------------------------------------------------------------------------
 
 export function Bridge({ text, onComplete }: BridgeProps) {
-  const opacity = useSharedValue(0);
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Fade in -> hold -> fade out -> call onComplete
-    opacity.value = withSequence(
-      withTiming(1, { duration: FADE_IN_MS, easing: Easing.out(Easing.ease) }),
-      withDelay(
-        HOLD_MS,
-        withTiming(0, { duration: FADE_OUT_MS, easing: Easing.in(Easing.ease) }),
-      ),
-    );
+    // Fade in -> hold -> fade out
+    Animated.sequence([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: FADE_IN_MS,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: false,
+      }),
+      Animated.delay(HOLD_MS),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: FADE_OUT_MS,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: false,
+      }),
+    ]).start();
 
     const totalMs = FADE_IN_MS + HOLD_MS + FADE_OUT_MS + 50;
     const timer = setTimeout(onComplete, totalMs);
     return () => clearTimeout(timer);
   }, []);
 
-  const animStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
   return (
-    <Animated.View style={[styles.overlay, animStyle]}>
+    <Animated.View style={[styles.overlay, { opacity }]}>
       {text ? <Text style={styles.text}>{text}</Text> : null}
     </Animated.View>
   );

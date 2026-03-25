@@ -8,16 +8,8 @@
  * @see SOV_PRD_08_ONBOARDING -- trait reveal at card 6
  */
 
-import React, { useEffect, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  withDelay,
-  Easing,
-} from 'react-native-reanimated';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, Animated, Easing } from 'react-native';
 
 import type { DefiningTrait } from '../../types';
 import { colors } from '../../theme/colors';
@@ -73,57 +65,67 @@ const AUTO_DISMISS_MS = 3000;
 export function TraitCeremony({ trait, onDismiss }: TraitCeremonyProps) {
   const info = TRAIT_INFO[trait];
 
-  // Animation shared values
-  const overlayOpacity = useSharedValue(0);
-  const iconScale = useSharedValue(0.5);
-  const textOpacity = useSharedValue(0);
-  const glowOpacity = useSharedValue(0);
+  // Animation values
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const iconScale = useRef(new Animated.Value(0.5)).current;
+  const textOpacity = useRef(new Animated.Value(0)).current;
+  const glowOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Fade in overlay
-    overlayOpacity.value = withTiming(1, { duration: 300 });
+    Animated.timing(overlayOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+
     // Scale up icon with spring
-    iconScale.value = withSpring(1, { damping: 12, stiffness: 100 });
+    Animated.spring(iconScale, {
+      toValue: 1,
+      damping: 12,
+      stiffness: 100,
+      useNativeDriver: false,
+    }).start();
+
     // Fade in text after icon settles
-    textOpacity.value = withDelay(400, withTiming(1, { duration: 500 }));
+    Animated.sequence([
+      Animated.delay(400),
+      Animated.timing(textOpacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: false,
+      }),
+    ]).start();
+
     // Gold glow pulse
-    glowOpacity.value = withDelay(200, withTiming(0.6, { duration: 800 }));
+    Animated.sequence([
+      Animated.delay(200),
+      Animated.timing(glowOpacity, {
+        toValue: 0.6,
+        duration: 800,
+        useNativeDriver: false,
+      }),
+    ]).start();
 
     // Auto-dismiss timer
     const timer = setTimeout(onDismiss, AUTO_DISMISS_MS);
     return () => clearTimeout(timer);
   }, []);
 
-  const overlayStyle = useAnimatedStyle(() => ({
-    opacity: overlayOpacity.value,
-  }));
-
-  const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: iconScale.value }],
-  }));
-
-  const textStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-  }));
-
   return (
-    <Animated.View style={[styles.overlay, overlayStyle]}>
+    <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
       <Pressable style={styles.pressable} onPress={onDismiss}>
         {/* Gold glow background */}
-        <Animated.View style={[styles.glow, glowStyle]} />
+        <Animated.View style={[styles.glow, { opacity: glowOpacity }]} />
 
         <View style={styles.content}>
           {/* Icon */}
-          <Animated.View style={[styles.iconContainer, iconStyle]}>
+          <Animated.View style={[styles.iconContainer, { transform: [{ scale: iconScale }] }]}>
             <Text style={styles.icon}>{info.icon}</Text>
           </Animated.View>
 
           {/* Label */}
-          <Animated.View style={textStyle}>
+          <Animated.View style={{ opacity: textOpacity }}>
             <Text style={styles.label}>DEFINING TRAIT</Text>
             <Text style={styles.traitName}>{info.label}</Text>
             <Text style={styles.description}>{info.description}</Text>

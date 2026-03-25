@@ -14,15 +14,7 @@
  */
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  Easing,
-  FadeIn,
-} from 'react-native-reanimated';
+import { View, Text, Pressable, StyleSheet, Animated, Easing } from 'react-native';
 
 import type { Card, TextContext } from '../../types';
 import { resolveText } from '../../services/game/text-resolver';
@@ -63,13 +55,13 @@ export function WorldNarration({ card, textContext, onReaction }: WorldNarration
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Button fade-in
-  const buttonOpacity = useSharedValue(0);
+  const buttonOpacity = useRef(new Animated.Value(0)).current;
 
   // Word-by-word reveal
   useEffect(() => {
     setVisibleWords(0);
     setShowButton(false);
-    buttonOpacity.value = 0;
+    buttonOpacity.setValue(0);
 
     let wordIndex = 0;
     timerRef.current = setInterval(() => {
@@ -100,7 +92,12 @@ export function WorldNarration({ card, textContext, onReaction }: WorldNarration
 
     const timer = setTimeout(() => {
       setShowButton(true);
-      buttonOpacity.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.ease) });
+      Animated.timing(buttonOpacity, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: false,
+      }).start();
     }, remaining);
 
     return () => clearTimeout(timer);
@@ -121,10 +118,6 @@ export function WorldNarration({ card, textContext, onReaction }: WorldNarration
     }
   }, [visibleWords, words.length]);
 
-  const buttonAnimStyle = useAnimatedStyle(() => ({
-    opacity: buttonOpacity.value,
-  }));
-
   return (
     <View style={styles.container}>
       {/* Top vignette */}
@@ -142,7 +135,7 @@ export function WorldNarration({ card, textContext, onReaction }: WorldNarration
 
       {/* Respond button */}
       {showButton && (
-        <Animated.View style={[styles.buttonWrapper, buttonAnimStyle]}>
+        <Animated.View style={[styles.buttonWrapper, { opacity: buttonOpacity }]}>
           <Pressable style={styles.respondButton} onPress={handleRespond}>
             <Text style={styles.respondText}>Respond</Text>
           </Pressable>

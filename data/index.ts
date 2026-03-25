@@ -7,7 +7,7 @@
 
 // Core definitions
 export { METERS, METER_STARTING_VALUE, getMeterZone, getMeterDef, createInitialMeters } from './meters';
-export { DISTRICTS, ADJACENCY, getDistrictDef, createInitialDistricts } from './districts';
+export { DISTRICTS, ADJACENCY, CONTAGION_THRESHOLD, CONTAGION_RATE, DRIFT_UNREST, DRIFT_PROSPERITY, getDistrictDef, createInitialDistricts } from './districts';
 export { NPCS, VOICE_PROFILES, LORD_ALDRIC, VILLAGE_ELDER, SPYMASTER, getNPCDef, getVoiceProfile } from './npcs';
 export { WORLDS, DEFAULT_WORLD_ID, getWorldDef, getUnlockedWorlds } from './worlds';
 export { DEATHS, getDeathNarrative } from './deaths';

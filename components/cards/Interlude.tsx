@@ -14,9 +14,8 @@
  * @see SOV_PRD_03_CORE_GAMEPLAY -- interlude card specification
  */
 
-import React, { useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, Animated, Easing } from 'react-native';
 
 import type { InterludeCard, TextContext } from '../../types';
 import { resolveText } from '../../services/game/text-resolver';
@@ -55,12 +54,21 @@ export function Interlude({ card, textContext, onComplete }: InterludeProps) {
     skip();
   }, [skip]);
 
+  // Fade-in animation
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: false,
+    }).start();
+  }, []);
+
   return (
     <Pressable style={styles.container} onPress={handleTap}>
       <Animated.View
-        style={styles.content}
-        entering={FadeIn.duration(600)}
-        exiting={FadeOut.duration(400)}
+        style={[styles.content, { opacity: fadeAnim }]}
       >
         {/* Interlude label */}
         <Text style={styles.label}>INTERLUDE</Text>
