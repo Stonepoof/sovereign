@@ -1,19 +1,25 @@
 /**
  * Sovereign -- Map Tab
  *
- * Stub showing 5 district names with their unrest values.
+ * Shows the radial DistrictMap with 5 connected nodes, plus a DistrictDetail
+ * panel below for the currently selected district.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import type { DistrictId } from '../../types';
 import { useDistrictStore } from '../../stores';
-import { DISTRICTS } from '../../data';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
+import { DistrictMap } from '../../components/map/DistrictMap';
+import { DistrictDetail } from '../../components/map/DistrictDetail';
 
 export default function MapScreen() {
   const districts = useDistrictStore((s) => s.districts);
+  const [selectedId, setSelectedId] = useState<DistrictId | null>(null);
+
+  const selectedDistrict = selectedId ? districts[selectedId] : null;
 
   return (
     <ScrollView
@@ -22,46 +28,26 @@ export default function MapScreen() {
     >
       <Text style={styles.header}>District Map</Text>
       <Text style={styles.subtitle}>
-        Five districts form the heart of the kingdom
+        Tap a district to view details
       </Text>
 
-      {DISTRICTS.map((def) => {
-        const state = districts[def.id];
-        const unrestZone =
-          state.unrest > 50 ? 'high' : state.unrest > 25 ? 'medium' : 'low';
-        const unrestColor =
-          unrestZone === 'high'
-            ? colors.error
-            : unrestZone === 'medium'
-            ? colors.warning
-            : colors.success;
+      {/* Radial Map */}
+      <View style={styles.mapWrapper}>
+        <DistrictMap onSelectDistrict={setSelectedId} />
+      </View>
 
-        return (
-          <View key={def.id} style={styles.districtCard}>
-            <View style={styles.districtHeader}>
-              <Text style={styles.districtIcon}>{def.icon}</Text>
-              <Text style={styles.districtName}>{def.name}</Text>
-            </View>
-            <View style={styles.statsRow}>
-              <View style={styles.stat}>
-                <Text style={styles.statLabel}>INFLUENCE</Text>
-                <Text style={styles.statValue}>{state.influence}</Text>
-              </View>
-              <View style={styles.stat}>
-                <Text style={styles.statLabel}>UNREST</Text>
-                <Text style={[styles.statValue, { color: unrestColor }]}>
-                  {state.unrest}
-                </Text>
-              </View>
-              <View style={styles.stat}>
-                <Text style={styles.statLabel}>PROSPERITY</Text>
-                <Text style={styles.statValue}>{state.prosperity}</Text>
-              </View>
-            </View>
-            <Text style={styles.theme}>{def.theme}</Text>
-          </View>
-        );
-      })}
+      {/* Detail Panel */}
+      {selectedDistrict ? (
+        <View style={styles.detailWrapper}>
+          <DistrictDetail district={selectedDistrict} />
+        </View>
+      ) : (
+        <View style={styles.hint}>
+          <Text style={styles.hintText}>
+            Select a district on the map above to see its stats
+          </Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -87,47 +73,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.xxl,
   },
-  districtCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  districtHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  districtIcon: {
-    fontSize: 24,
-  },
-  districtName: {
-    ...typography.h3,
-    color: colors.textPrimary,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: spacing.md,
-  },
-  stat: {
+  mapWrapper: {
+    marginBottom: spacing.xxl,
     alignItems: 'center',
   },
-  statLabel: {
-    ...typography.statLabel,
-    color: colors.textMuted,
+  detailWrapper: {
+    marginTop: spacing.sm,
   },
-  statValue: {
-    ...typography.stat,
-    color: colors.textPrimary,
-    marginTop: 2,
+  hint: {
+    alignItems: 'center',
+    padding: spacing.xxl,
   },
-  theme: {
-    ...typography.caption,
+  hintText: {
+    ...typography.bodySmall,
     color: colors.textMuted,
+    textAlign: 'center',
     fontStyle: 'italic',
   },
 });

@@ -1,25 +1,41 @@
 /**
  * Sovereign -- Court Tab
  *
- * Shows recruited NPCs with loyalty values.
+ * Shows the player's recruited NPC roster using NPCCard components,
+ * with a separate section for NPCs available to recruit.
  */
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useCourtStore } from '../../stores';
+import { useCourtStore, useGameStore } from '../../stores';
+import { NPCS } from '../../data';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { spacing } from '../../theme/spacing';
+import { spacing, borderRadius } from '../../theme/spacing';
+import { NPCCard } from '../../components/court/NPCCard';
 
 export default function CourtScreen() {
   const npcs = useCourtStore((s) => s.npcs);
+  const week = useGameStore((s) => s.week);
+
   const recruited = npcs.filter((n) => n.recruited);
+
+  // NPCs whose recruitWeek has passed but who haven't been recruited yet.
+  // Match NPC state back to NPCDef to check recruitWeek.
+  const available = npcs.filter((n) => {
+    if (n.recruited) return false;
+    const def = NPCS.find((d) => d.name === n.name);
+    // If no recruitWeek defined, treat as not yet available
+    if (!def || def.recruitWeek === undefined) return false;
+    return week >= def.recruitWeek;
+  });
 
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
     >
+      {/* Header */}
       <Text style={styles.header}>Your Court</Text>
       <Text style={styles.subtitle}>
         {recruited.length > 0
@@ -27,6 +43,7 @@ export default function CourtScreen() {
           : 'No advisors recruited yet'}
       </Text>
 
+      {/* Empty State */}
       {recruited.length === 0 && (
         <View style={styles.emptyState}>
           <Text style={styles.emptyEmoji}>👑</Text>
@@ -37,38 +54,23 @@ export default function CourtScreen() {
         </View>
       )}
 
-      {recruited.map((npc) => {
-        const loyaltyColor =
-          npc.loy >= 70
-            ? colors.success
-            : npc.loy >= 40
-            ? colors.warning
-            : colors.error;
+      {/* Recruited NPCs */}
+      {recruited.map((npc) => (
+        <NPCCard key={npc.name} npc={npc} />
+      ))}
 
-        return (
-          <View key={npc.name} style={styles.npcCard}>
-            <View style={styles.npcHeader}>
-              <Text style={styles.npcPortrait}>{npc.portrait ?? '👤'}</Text>
-              <View style={styles.npcInfo}>
-                <Text style={styles.npcName}>{npc.name}</Text>
-                <Text style={styles.npcRole}>{npc.role}</Text>
-                {npc.faction && (
-                  <Text style={styles.npcFaction}>{npc.faction}</Text>
-                )}
-              </View>
-              <View style={styles.loyaltyContainer}>
-                <Text style={styles.loyaltyLabel}>LOYALTY</Text>
-                <Text style={[styles.loyaltyValue, { color: loyaltyColor }]}>
-                  {npc.loy}
-                </Text>
-              </View>
-            </View>
-            {npc.dispatched && (
-              <Text style={styles.dispatchedBadge}>DISPATCHED</Text>
-            )}
-          </View>
-        );
-      })}
+      {/* Available to Recruit */}
+      {available.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionHeader}>Available to Recruit</Text>
+          <Text style={styles.sectionSubtitle}>
+            These NPCs can be recruited through gameplay
+          </Text>
+          {available.map((npc) => (
+            <NPCCard key={npc.name} npc={npc} />
+          ))}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -98,9 +100,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xxl,
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: spacing.lg,
   },
   emptyEmoji: {
     fontSize: 48,
@@ -111,58 +114,17 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  npcCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+  section: {
+    marginTop: spacing.xxl,
   },
-  npcHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  npcPortrait: {
-    fontSize: 36,
-  },
-  npcInfo: {
-    flex: 1,
-  },
-  npcName: {
+  sectionHeader: {
     ...typography.h3,
-    color: colors.textPrimary,
+    color: colors.textAccent,
+    marginBottom: spacing.xxs,
   },
-  npcRole: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-  },
-  npcFaction: {
+  sectionSubtitle: {
     ...typography.caption,
-    color: colors.accent,
-    marginTop: 2,
-  },
-  loyaltyContainer: {
-    alignItems: 'center',
-  },
-  loyaltyLabel: {
-    ...typography.statLabel,
     color: colors.textMuted,
-  },
-  loyaltyValue: {
-    ...typography.stat,
-    marginTop: 2,
-  },
-  dispatchedBadge: {
-    ...typography.label,
-    color: colors.info,
-    backgroundColor: 'rgba(33, 150, 243, 0.15)',
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginTop: spacing.sm,
+    marginBottom: spacing.md,
   },
 });
