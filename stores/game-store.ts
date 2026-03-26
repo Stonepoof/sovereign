@@ -21,6 +21,8 @@ interface GameStoreState {
   corruption: number;
   cardsPlayed: string[];
   originComplete: boolean;
+  gold: number;
+  gems: number;
 
   setPhase: (phase: GamePhase) => void;
   setWorldId: (id: string) => void;
@@ -29,6 +31,8 @@ interface GameStoreState {
   addCorruption: (delta: number) => void;
   recordCardPlayed: (cardId: string) => void;
   completeOrigin: () => void;
+  spendGold: (amount: number) => boolean;
+  addGold: (amount: number) => void;
   resetGame: () => void;
 }
 
@@ -41,6 +45,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   corruption: 0,
   cardsPlayed: [],
   originComplete: false,
+  gold: 500,
+  gems: 0,
 
   setPhase: (phase) => set({ phase }),
 
@@ -63,6 +69,15 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
   completeOrigin: () => set({ originComplete: true, phase: 'gameplay' }),
 
+  spendGold: (amount) => {
+    const { gold } = get();
+    if (gold < amount) return false;
+    set({ gold: gold - amount });
+    return true;
+  },
+
+  addGold: (amount) => set((s) => ({ gold: s.gold + amount })),
+
   resetGame: () =>
     set({
       phase: 'origin',
@@ -73,5 +88,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       corruption: 0,
       cardsPlayed: [],
       originComplete: false,
+      gold: 500,
+      gems: 0,
     }),
 }));

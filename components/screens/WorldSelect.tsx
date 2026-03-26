@@ -47,7 +47,14 @@ export function WorldSelect({ onSelectWorld }: WorldSelectProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const titleScale = useRef(new Animated.Value(0.8)).current;
 
+  // Title shimmer: oscillate opacity between 0.8 and 1.0
+  const titleShimmer = useRef(new Animated.Value(1)).current;
+
+  // Staggered card fade-in values
+  const cardFades = useRef(WORLDS.map(() => new Animated.Value(0))).current;
+
   useEffect(() => {
+    // Title + container entrance
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -61,13 +68,44 @@ export function WorldSelect({ onSelectWorld }: WorldSelectProps) {
         friction: 7,
       }),
     ]).start();
-  }, [fadeAnim, titleScale]);
+
+    // Staggered card fade-in: 100ms delay between each
+    const cardAnimations = cardFades.map((anim, index) =>
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 400,
+        delay: 400 + index * 100,
+        useNativeDriver: false,
+      })
+    );
+    Animated.stagger(100, cardAnimations).start();
+
+    // Title shimmer loop
+    const shimmerLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(titleShimmer, {
+          toValue: 0.8,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+        Animated.timing(titleShimmer, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+      ])
+    );
+    shimmerLoop.start();
+    return () => shimmerLoop.stop();
+  }, [fadeAnim, titleScale, cardFades, titleShimmer]);
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       {/* Title */}
       <Animated.View style={{ transform: [{ scale: titleScale }] }}>
-        <Text style={styles.title}>SOVEREIGN</Text>
+        <Animated.Text style={[styles.title, { opacity: titleShimmer }]}>
+          SOVEREIGN
+        </Animated.Text>
         <Text style={styles.subtitle}>Choose Your World</Text>
       </Animated.View>
 
@@ -77,22 +115,23 @@ export function WorldSelect({ onSelectWorld }: WorldSelectProps) {
         contentContainerStyle={styles.cardsContainer}
         showsVerticalScrollIndicator={false}
       >
-        {WORLDS.map((world) => (
-          <TouchableOpacity
-            key={world.id}
-            onPress={() => onSelectWorld(world)}
-            activeOpacity={0.8}
-            style={[styles.worldCard, { borderColor: world.color }]}
-          >
-            <Text style={styles.themeBadge}>{world.theme}</Text>
-            <Text style={[styles.worldName, { color: world.color }]}>
-              {world.name}
-            </Text>
-            <Text style={styles.worldDescription}>{world.description}</Text>
-            <Text style={[styles.playLabel, { color: world.color }]}>
-              TAP TO BEGIN →
-            </Text>
-          </TouchableOpacity>
+        {WORLDS.map((world, index) => (
+          <Animated.View key={world.id} style={{ opacity: cardFades[index] }}>
+            <TouchableOpacity
+              onPress={() => onSelectWorld(world)}
+              activeOpacity={0.8}
+              style={[styles.worldCard, { borderColor: world.color }]}
+            >
+              <Text style={styles.themeBadge}>{world.theme}</Text>
+              <Text style={[styles.worldName, { color: world.color }]}>
+                {world.name}
+              </Text>
+              <Text style={styles.worldDescription}>{world.description}</Text>
+              <Text style={[styles.playLabel, { color: world.color }]}>
+                TAP TO BEGIN →
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
         ))}
       </ScrollView>
     </Animated.View>

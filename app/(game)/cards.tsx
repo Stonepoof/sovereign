@@ -22,6 +22,8 @@ import { ConvoResult } from '../../components/cards/ConvoResult';
 import { OriginPhase } from '../../components/screens/OriginPhase';
 import { DiceOverlay } from '../../components/dice/DiceOverlay';
 import { Bridge } from '../../components/overlays/Bridge';
+import { WeeklySummary } from '../../components/overlays/WeeklySummary';
+import { useGameStore as useGameCoreStore } from '../../stores/game-store';
 
 import type {
   SwipeDirection,
@@ -101,6 +103,7 @@ export default function CardsScreen() {
     subPhase,
     week,
     meters,
+    districts,
     rapport,
     currentCard,
     setPhase,
@@ -112,6 +115,9 @@ export default function CardsScreen() {
     setRapport,
   } = useGameStore();
 
+  // Corruption from core game store
+  const corruption = useGameCoreStore((s) => s.corruption);
+
   // Local state for card flow
   const [lastSwipeDirection, setLastSwipeDirection] = useState<SwipeDirection>('right');
   const [lastChoiceLabel, setLastChoiceLabel] = useState('');
@@ -120,6 +126,10 @@ export default function CardsScreen() {
   const [showDice, setShowDice] = useState(false);
   const [pendingEffects, setPendingEffects] = useState<MeterDelta[]>([]);
   const [showBridge, setShowBridge] = useState(false);
+
+  // Weekly summary tracking
+  const [weekMeterSnapshot, setWeekMeterSnapshot] = useState<Record<string, number>>({ ...meters });
+  const [weeklyDeltas, setWeeklyDeltas] = useState<MeterDelta[]>([]);
 
   // ─── Death check ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -140,10 +150,13 @@ export default function CardsScreen() {
 
   // ─── Card flow functions ─────────────────────────────────────────────────
   const startNewWeek = useCallback(() => {
+    // Snapshot meters at start of each week for weekly summary tracking
+    setWeekMeterSnapshot({ ...meters });
+    setWeeklyDeltas([]);
     const narration = generateNarration(week);
     setCurrentCard(narration);
     setSubPhase('narration');
-  }, [week, setCurrentCard, setSubPhase]);
+  }, [week, meters, setCurrentCard, setSubPhase]);
 
   const handleNarrationRespond = useCallback(() => {
     const card = generateMockCard(week);
@@ -199,16 +212,30 @@ export default function CardsScreen() {
   );
 
   const handleImpactAdvance = useCallback(() => {
-    // Decide: interlude every 3 weeks, or advance
+    // Every 3rd week: show weekly summary before advancing
     if (week % 3 === 0) {
-      const interlude = generateInterlude();
-      setCurrentCard(interlude);
-      setSubPhase('narration');
+      // Compute net deltas from the snapshot
+      const meterKeys = Object.keys(weekMeterSnapshot) as Array<keyof typeof meters>;
+      const deltas: MeterDelta[] = meterKeys
+        .map((key) => ({
+          meter: key,
+          delta: meters[key] - (weekMeterSnapshot[key] ?? meters[key]),
+        }))
+        .filter((d) => d.delta !== 0);
+      setWeeklyDeltas(deltas);
+      setSubPhase('weekly_summary');
     } else {
       advanceWeek();
       setShowBridge(true);
     }
-  }, [week, setCurrentCard, setSubPhase, advanceWeek]);
+  }, [week, meters, weekMeterSnapshot, setSubPhase, advanceWeek]);
+
+  const handleWeeklySummaryDismiss = useCallback(() => {
+    // After weekly summary, show interlude then advance
+    const interlude = generateInterlude();
+    setCurrentCard(interlude);
+    setSubPhase('narration');
+  }, [setCurrentCard, setSubPhase]);
 
   const handleInterludeAdvance = useCallback(() => {
     advanceWeek();
@@ -287,6 +314,16 @@ export default function CardsScreen() {
             />
           )}
 
+          {subPhase === 'weekly_summary' && (
+            <WeeklySummary
+              week={week}
+              meterDeltas={weeklyDeltas}
+              districts={districts}
+              corruption={corruption}
+              onDismiss={handleWeeklySummaryDismiss}
+            />
+          )}
+
           {subPhase === 'conversation' && (
             <ConversationView
               npcName="Lord Aldric"
@@ -315,7 +352,7 @@ export default function CardsScreen() {
           )}
 
           {/* Empty state */}
-          {!currentCard && phase === 'playing' && subPhase !== 'impact' && (
+          {!currentCard && phase === 'playing' && subPhase !== 'impact' && subPhase !== 'weekly_summary' && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>Preparing next event...</Text>
             </View>

@@ -3,7 +3,7 @@
 // 12px dead zone, 136px horizontal / 100px vertical commit threshold,
 // 800px/s velocity override, 15-degree tilt, spring snap-back, timing exit.
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
 import { Animated, PanResponder, Easing, Dimensions } from 'react-native';
 import type { SwipeDirection } from '../types';
 
@@ -25,6 +25,9 @@ interface UseSwipeGestureOptions {
 interface UseSwipeGestureReturn {
   pan: Animated.ValueXY;
   tilt: Animated.Value;
+  commitScale: Animated.Value;
+  isCommitted: boolean;
+  committedDirection: SwipeDirection | null;
   panResponder: ReturnType<typeof PanResponder.create>;
   resetPosition: () => void;
 }
@@ -36,8 +39,31 @@ export function useSwipeGesture({
 }: UseSwipeGestureOptions): UseSwipeGestureReturn {
   const pan = useRef(new Animated.ValueXY()).current;
   const tilt = useRef(new Animated.Value(0)).current;
+  const commitScale = useRef(new Animated.Value(1)).current;
+  const [isCommitted, setIsCommitted] = useState(false);
+  const [committedDirection, setCommittedDirection] = useState<SwipeDirection | null>(null);
+  const wasCommitted = useRef(false);
+
+  const triggerCommitPulse = useCallback(() => {
+    Animated.sequence([
+      Animated.timing(commitScale, {
+        toValue: 1.05,
+        duration: 75,
+        useNativeDriver: false,
+      }),
+      Animated.timing(commitScale, {
+        toValue: 1.0,
+        duration: 75,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [commitScale]);
 
   const resetPosition = useCallback(() => {
+    setIsCommitted(false);
+    setCommittedDirection(null);
+    wasCommitted.current = false;
+    commitScale.setValue(1);
     Animated.spring(pan, {
       toValue: { x: 0, y: 0 },
       useNativeDriver: false,
@@ -50,7 +76,7 @@ export function useSwipeGesture({
       tension: 40,
       friction: 5,
     }).start();
-  }, [pan, tilt]);
+  }, [pan, tilt, commitScale]);
 
   const animateExit = useCallback(
     (direction: SwipeDirection, callback: () => void) => {
@@ -84,6 +110,43 @@ export function useSwipeGesture({
         // Tilt based on horizontal movement
         const tiltDeg = (gesture.dx / COMMIT_X) * MAX_TILT_DEG;
         tilt.setValue(Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, tiltDeg)));
+
+        // Check commit threshold
+        const absX = Math.abs(gesture.dx);
+        const absY = Math.abs(gesture.dy);
+        let crossedThreshold = false;
+        let dir: SwipeDirection | null = null;
+
+        if (absX > absY) {
+          if (absX >= COMMIT_X) {
+            crossedThreshold = true;
+            dir = gesture.dx > 0 ? 'right' : 'left';
+          }
+        } else {
+          if (absY >= COMMIT_Y) {
+            crossedThreshold = true;
+            dir = gesture.dy > 0 ? 'down' : 'up';
+          }
+        }
+
+        if (crossedThreshold && dir && enabledDirections.includes(dir)) {
+          if (!wasCommitted.current) {
+            wasCommitted.current = true;
+            setIsCommitted(true);
+            setCommittedDirection(dir);
+            triggerCommitPulse();
+          } else {
+            // Direction may change while still committed
+            setCommittedDirection(dir);
+          }
+        } else {
+          if (wasCommitted.current) {
+            wasCommitted.current = false;
+            setIsCommitted(false);
+            setCommittedDirection(null);
+            commitScale.setValue(1);
+          }
+        }
       },
       onPanResponderRelease: (_, gesture) => {
         const absX = Math.abs(gesture.dx);
@@ -111,6 +174,10 @@ export function useSwipeGesture({
             onSwipe(direction!);
             pan.setValue({ x: 0, y: 0 });
             tilt.setValue(0);
+            commitScale.setValue(1);
+            wasCommitted.current = false;
+            setIsCommitted(false);
+            setCommittedDirection(null);
           });
         } else {
           resetPosition();
@@ -122,5 +189,5 @@ export function useSwipeGesture({
     })
   ).current;
 
-  return { pan, tilt, panResponder, resetPosition };
+  return { pan, tilt, commitScale, isCommitted, committedDirection, panResponder, resetPosition };
 }

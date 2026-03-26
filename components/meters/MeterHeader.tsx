@@ -2,8 +2,8 @@
 // Sticky top header showing all 5 meters.
 // Compact row mode (default) / expanded stack mode.
 
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { colors } from '../../theme/colors';
 import { fontSize, fontWeight } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
@@ -35,6 +35,27 @@ export function MeterHeader() {
   const act = useGameStore((s) => s.act);
   const [expanded, setExpanded] = useState(false);
 
+  // Pulse animation for week indicator when week changes
+  const weekPulse = useRef(new Animated.Value(0)).current;
+  const prevWeekRef = useRef(week);
+
+  useEffect(() => {
+    if (prevWeekRef.current !== week) {
+      prevWeekRef.current = week;
+      weekPulse.setValue(1);
+      Animated.timing(weekPulse, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [week, weekPulse]);
+
+  const weekTextColor = weekPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.textMuted, colors.gold],
+  });
+
   return (
     <TouchableOpacity
       onPress={() => setExpanded(!expanded)}
@@ -43,9 +64,9 @@ export function MeterHeader() {
     >
       {/* Week indicator */}
       <View style={styles.weekRow}>
-        <Text style={styles.weekText}>
+        <Animated.Text style={[styles.weekText, { color: weekTextColor }]}>
           Act {act} — Week {week}
-        </Text>
+        </Animated.Text>
       </View>
 
       {expanded ? (

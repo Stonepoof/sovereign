@@ -2,7 +2,7 @@
 // Main agency card with PanResponder-based swiping.
 // Agency badge, portrait placeholder, gold title, option arrows + labels + meter dots.
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
 import { colors } from '../../theme/colors';
 import { fontSize, fontWeight } from '../../theme/typography';
@@ -31,11 +31,36 @@ const METER_DOT_COLORS: Record<string, string> = {
 };
 
 export function SwipeCard({ card, onSwipe }: SwipeCardProps) {
+  const fadeIn = useRef(new Animated.Value(0)).current;
+  const scaleIn = useRef(new Animated.Value(0.95)).current;
+
   const enabledDirections = card.options.map((o: GameCardOption) => o.direction);
-  const { pan, tilt, panResponder } = useSwipeGesture({
+  const { pan, tilt, commitScale, isCommitted, committedDirection, panResponder } = useSwipeGesture({
     onSwipe,
     enabledDirections,
   });
+
+  const directionColor = committedDirection
+    ? (colors.swipe as Record<string, string>)[committedDirection]
+    : undefined;
+
+  // Fade-in + scale-up when a new card appears
+  useEffect(() => {
+    fadeIn.setValue(0);
+    scaleIn.setValue(0.95);
+    Animated.parallel([
+      Animated.timing(fadeIn, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(scaleIn, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [card.id, fadeIn, scaleIn]);
 
   const rotate = tilt.interpolate({
     inputRange: [-15, 15],
@@ -51,11 +76,22 @@ export function SwipeCard({ card, onSwipe }: SwipeCardProps) {
       style={[
         styles.card,
         {
+          opacity: fadeIn,
           transform: [
             { translateX: pan.x },
             { translateY: pan.y },
             { rotate },
+            { scale: Animated.multiply(scaleIn, commitScale) },
           ],
+          ...(isCommitted && directionColor
+            ? {
+                borderColor: directionColor,
+                shadowColor: directionColor,
+                shadowOpacity: 0.6,
+                shadowRadius: 16,
+                elevation: 16,
+              }
+            : {}),
         },
       ]}
     >

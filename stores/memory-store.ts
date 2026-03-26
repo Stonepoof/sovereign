@@ -1,14 +1,16 @@
 // ─── Memory Store ─────────────────────────────────────────────────────────
-// Tracks flags, choices, witnessed events, and cards played.
+// Tracks flags, choices, witnessed events, cards played, and enacted policies.
 // Provides Set-like API for efficient lookups.
 
 import { create } from 'zustand';
+import { PolicyRecord } from '../types';
 
 interface MemoryStoreState {
   _flags: string[];
   _choices: string[];
   _witnessed: string[];
   _cardsPlayed: string[];
+  _policies: PolicyRecord[];
 
   // Flag operations
   setFlag: (flag: string) => void;
@@ -29,6 +31,10 @@ interface MemoryStoreState {
   hasPlayedCard: (cardId: string) => boolean;
   getCardsPlayedCount: () => number;
 
+  // Policy tracking
+  enactPolicy: (policy: PolicyRecord) => void;
+  getPolicies: () => PolicyRecord[];
+
   // Bulk
   resetMemory: () => void;
 }
@@ -38,6 +44,7 @@ export const useMemoryStore = create<MemoryStoreState>((set, get) => ({
   _choices: [],
   _witnessed: [],
   _cardsPlayed: [],
+  _policies: [],
 
   setFlag: (flag) => {
     if (!get()._flags.includes(flag)) {
@@ -78,6 +85,11 @@ export const useMemoryStore = create<MemoryStoreState>((set, get) => ({
 
   getCardsPlayedCount: () => get()._cardsPlayed.length,
 
+  enactPolicy: (policy) =>
+    set((s) => ({ _policies: [...s._policies, policy] })),
+
+  getPolicies: () => get()._policies,
+
   resetMemory: () =>
-    set({ _flags: [], _choices: [], _witnessed: [], _cardsPlayed: [] }),
+    set({ _flags: [], _choices: [], _witnessed: [], _cardsPlayed: [], _policies: [] }),
 }));

@@ -101,6 +101,7 @@ export type CardSubPhase =
   | 'card'
   | 'dice'
   | 'impact'
+  | 'weekly_summary'
   | 'conversation'
   | 'convo_result';
 
@@ -118,6 +119,21 @@ export interface World {
 
 /** Alias for backward compatibility */
 export type WorldDef = World;
+
+/** Policy category for grouping enacted policies */
+export type PolicyCategory = 'Economic Policies' | 'Military Policies' | 'Social Policies';
+
+/** A policy enacted by the player, derived from a card choice */
+export interface PolicyRecord {
+  cardId: string;
+  cardTitle: string;
+  direction: Direction;
+  choiceLabel: string;
+  meterEffects: Record<string, number>;
+  agency: AgencyType;
+  category: PolicyCategory;
+  week: number;
+}
 
 /** Tab configuration for the tab bar */
 export interface TabConfig {

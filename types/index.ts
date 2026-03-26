@@ -18,6 +18,8 @@ export type {
   TabConfig,
   ConvoResponse,
   ConvoBeat,
+  PolicyCategory,
+  PolicyRecord,
 } from './game';
 
 export type {

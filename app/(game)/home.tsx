@@ -1,8 +1,8 @@
 // ─── Home Tab ────────────────────────────────────────────────────────────────
 // Week/act display, trait card, meter overview, "Continue" button.
 
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, ScrollView, StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { fontSize, fontWeight } from '../../theme/typography';
@@ -24,6 +24,31 @@ const METER_LABELS: Record<MeterKey, string> = {
 export default function HomeScreen() {
   const router = useRouter();
   const { week, act, trait, meters, selectedWorld } = useGameStore();
+
+  // Fade-in for Kingdom Status section
+  const sectionFade = useRef(new Animated.Value(0)).current;
+
+  // Staggered fade-in for each meter row (150ms stagger)
+  const meterFades = useRef(METER_KEYS.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    // Fade in the section title first
+    Animated.timing(sectionFade, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+
+    // Stagger meter rows with 150ms delay between each
+    const meterAnimations = meterFades.map((anim) =>
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: false,
+      })
+    );
+    Animated.stagger(150, meterAnimations).start();
+  }, [sectionFade, meterFades]);
 
   return (
     <ScrollView
@@ -50,10 +75,10 @@ export default function HomeScreen() {
       )}
 
       {/* Meter overview */}
-      <View style={styles.metersSection}>
+      <Animated.View style={[styles.metersSection, { opacity: sectionFade }]}>
         <Text style={styles.sectionTitle}>Kingdom Status</Text>
-        {METER_KEYS.map((key) => (
-          <View key={key} style={styles.meterRow}>
+        {METER_KEYS.map((key, index) => (
+          <Animated.View key={key} style={[styles.meterRow, { opacity: meterFades[index] }]}>
             <Text style={[styles.meterLabel, { color: colors.meter[key] }]}>
               {METER_LABELS[key]}
             </Text>
@@ -61,9 +86,9 @@ export default function HomeScreen() {
               <MeterBar meterKey={key} value={meters[key]} />
             </View>
             <Text style={styles.meterValue}>{meters[key]}</Text>
-          </View>
+          </Animated.View>
         ))}
-      </View>
+      </Animated.View>
 
       {/* Continue button */}
       <Button
