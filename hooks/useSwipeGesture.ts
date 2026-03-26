@@ -3,7 +3,7 @@
 // 12px dead zone, 136px horizontal / 100px vertical commit threshold,
 // 800px/s velocity override, 15-degree tilt, spring snap-back, timing exit.
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
 import { Animated, PanResponder, Easing, Dimensions } from 'react-native';
 import type { SwipeDirection } from '../types';
 
@@ -25,8 +25,10 @@ interface UseSwipeGestureOptions {
 interface UseSwipeGestureReturn {
   pan: Animated.ValueXY;
   tilt: Animated.Value;
+  scale: Animated.Value;
   panResponder: ReturnType<typeof PanResponder.create>;
   resetPosition: () => void;
+  thresholdDirection: SwipeDirection | null;
 }
 
 export function useSwipeGesture({
@@ -36,6 +38,26 @@ export function useSwipeGesture({
 }: UseSwipeGestureOptions): UseSwipeGestureReturn {
   const pan = useRef(new Animated.ValueXY()).current;
   const tilt = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  const [thresholdDirection, setThresholdDirection] = useState<SwipeDirection | null>(null);
+
+  const triggerPulse = useCallback(() => {
+    scale.setValue(1);
+    Animated.sequence([
+      Animated.timing(scale, {
+        toValue: 1.05,
+        duration: 75,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: false,
+      }),
+      Animated.timing(scale, {
+        toValue: 1.0,
+        duration: 75,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [scale]);
 
   const resetPosition = useCallback(() => {
     Animated.spring(pan, {
@@ -50,7 +72,14 @@ export function useSwipeGesture({
       tension: 40,
       friction: 5,
     }).start();
-  }, [pan, tilt]);
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: false,
+      tension: 40,
+      friction: 5,
+    }).start();
+    setThresholdDirection(null);
+  }, [pan, tilt, scale]);
 
   const animateExit = useCallback(
     (direction: SwipeDirection, callback: () => void) => {
@@ -84,6 +113,31 @@ export function useSwipeGesture({
         // Tilt based on horizontal movement
         const tiltDeg = (gesture.dx / COMMIT_X) * MAX_TILT_DEG;
         tilt.setValue(Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, tiltDeg)));
+
+        // Detect threshold crossings for visual feedback
+        const absX = Math.abs(gesture.dx);
+        const absY = Math.abs(gesture.dy);
+        let newThresholdDirection: SwipeDirection | null = null;
+
+        if (absX > absY) {
+          // Horizontal movement
+          if (absX >= COMMIT_X) {
+            newThresholdDirection = gesture.dx > 0 ? 'right' : 'left';
+          }
+        } else {
+          // Vertical movement
+          if (absY >= COMMIT_Y) {
+            newThresholdDirection = gesture.dy > 0 ? 'down' : 'up';
+          }
+        }
+
+        // Only trigger pulse and update direction if enabled and threshold just crossed
+        if (newThresholdDirection && enabledDirections.includes(newThresholdDirection) && newThresholdDirection !== thresholdDirection) {
+          setThresholdDirection(newThresholdDirection);
+          triggerPulse();
+        } else if (!newThresholdDirection && thresholdDirection) {
+          setThresholdDirection(null);
+        }
       },
       onPanResponderRelease: (_, gesture) => {
         const absX = Math.abs(gesture.dx);
@@ -122,5 +176,5 @@ export function useSwipeGesture({
     })
   ).current;
 
-  return { pan, tilt, panResponder, resetPosition };
+  return { pan, tilt, scale, panResponder, resetPosition, thresholdDirection };
 }
