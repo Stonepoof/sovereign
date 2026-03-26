@@ -1,3 +1,4 @@
+// Sovereign color palette
 // ─── Color Palette ─────────────────────────────────────────────────────────
 // Dark-first palette for Sovereign. Gold accent, dark backgrounds.
 
