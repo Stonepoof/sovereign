@@ -32,7 +32,7 @@ const METER_DOT_COLORS: Record<string, string> = {
 
 export function SwipeCard({ card, onSwipe }: SwipeCardProps) {
   const enabledDirections = card.options.map((o: GameCardOption) => o.direction);
-  const { pan, tilt, panResponder } = useSwipeGesture({
+  const { pan, tilt, scale, panResponder, thresholdDirection } = useSwipeGesture({
     onSwipe,
     enabledDirections,
   });
@@ -45,16 +45,23 @@ export function SwipeCard({ card, onSwipe }: SwipeCardProps) {
 
   const agencyColor = card.agency ? (colors.agency as Record<string, string>)[card.agency] ?? colors.gold : colors.gold;
 
+  // Dynamic border color based on threshold crossing
+  const borderColor = thresholdDirection
+    ? (colors.swipe as Record<string, string>)[thresholdDirection]
+    : colors.surfaceBorder;
+
   return (
     <Animated.View
       {...panResponder.panHandlers}
       style={[
         styles.card,
         {
+          borderColor,
           transform: [
             { translateX: pan.x },
             { translateY: pan.y },
             { rotate },
+            { scale },
           ],
         },
       ]}
