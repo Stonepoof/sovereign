@@ -9,7 +9,7 @@
  * @see SOV_PRD_03_CORE_GAMEPLAY section 3 -- swipe thresholds, velocity override
  */
 
-import { useCallback, useRef, useMemo } from 'react';
+import { useCallback, useRef, useMemo, useState } from 'react';
 import { Animated, Easing, PanResponder } from 'react-native';
 import type { Direction } from '../types';
 
@@ -82,6 +82,8 @@ export interface SwipeGestureReturn {
   };
   /** Currently active swipe direction (read via .current). */
   activeDirection: React.MutableRefObject<Direction | null>;
+  /** Currently active swipe direction (state that triggers re-renders). */
+  activeDirectionState: Direction | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -172,6 +174,7 @@ export function useSwipeGesture(config: SwipeGestureConfig): SwipeGestureReturn 
   // Track state
   const isExitingRef = useRef(false);
   const activeDirection = useRef<Direction | null>(null);
+  const [activeDirectionState, setActiveDirectionState] = useState<Direction | null>(null);
 
   // Rotation interpolation based on translateX
   const rotation = translateX.interpolate({
@@ -196,7 +199,9 @@ export function useSwipeGesture(config: SwipeGestureConfig): SwipeGestureReturn 
           if (isExitingRef.current) return;
           translateX.setValue(gestureState.dx);
           translateY.setValue(gestureState.dy);
-          activeDirection.current = detectDirection(gestureState.dx, gestureState.dy);
+          const newDirection = detectDirection(gestureState.dx, gestureState.dy);
+          activeDirection.current = newDirection;
+          setActiveDirectionState(newDirection);
         },
         onPanResponderRelease: (_, gestureState) => {
           if (isExitingRef.current) return;
@@ -207,6 +212,7 @@ export function useSwipeGesture(config: SwipeGestureConfig): SwipeGestureReturn 
           // No direction detected -- snap back
           if (!direction) {
             activeDirection.current = null;
+            setActiveDirectionState(null);
             Animated.spring(translateX, { toValue: 0, ...SNAP_SPRING_CONFIG }).start();
             Animated.spring(translateY, { toValue: 0, ...SNAP_SPRING_CONFIG }).start();
             Animated.spring(scale, { toValue: 1, ...SNAP_SPRING_CONFIG }).start();
@@ -245,6 +251,7 @@ export function useSwipeGesture(config: SwipeGestureConfig): SwipeGestureReturn 
               // Reset values for next card
               isExitingRef.current = false;
               activeDirection.current = null;
+              setActiveDirectionState(null);
               translateX.setValue(0);
               translateY.setValue(0);
               scale.setValue(1);
@@ -252,6 +259,7 @@ export function useSwipeGesture(config: SwipeGestureConfig): SwipeGestureReturn 
           } else {
             // Snap back to center
             activeDirection.current = null;
+            setActiveDirectionState(null);
             Animated.spring(translateX, { toValue: 0, ...SNAP_SPRING_CONFIG }).start();
             Animated.spring(translateY, { toValue: 0, ...SNAP_SPRING_CONFIG }).start();
             Animated.spring(scale, { toValue: 1, ...SNAP_SPRING_CONFIG }).start();
@@ -260,6 +268,7 @@ export function useSwipeGesture(config: SwipeGestureConfig): SwipeGestureReturn 
         onPanResponderTerminate: () => {
           if (!isExitingRef.current) {
             activeDirection.current = null;
+            setActiveDirectionState(null);
             Animated.spring(translateX, { toValue: 0, ...SNAP_SPRING_CONFIG }).start();
             Animated.spring(translateY, { toValue: 0, ...SNAP_SPRING_CONFIG }).start();
             Animated.spring(scale, { toValue: 1, ...SNAP_SPRING_CONFIG }).start();
@@ -282,6 +291,7 @@ export function useSwipeGesture(config: SwipeGestureConfig): SwipeGestureReturn 
     panResponder,
     animatedStyle,
     activeDirection,
+    activeDirectionState,
   };
 }
 

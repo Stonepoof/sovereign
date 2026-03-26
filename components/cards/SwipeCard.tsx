@@ -153,6 +153,69 @@ function OptionItem({
   );
 }
 
+/** Swipe preview overlay showing meter effects during gesture. */
+function SwipePreview({
+  direction,
+  meters,
+  visible,
+}: {
+  direction: Direction | null;
+  meters: MeterEffects | undefined;
+  visible: boolean;
+}) {
+  if (!visible || !direction || !meters) {
+    return null;
+  }
+
+  const directionColor = DIRECTION_COLORS[direction];
+  const arrow = DIRECTION_ARROWS[direction];
+
+  // Get meter effects for this direction
+  const meterEffects = useMemo(() => {
+    return Object.entries(meters)
+      .filter(([, value]) => value !== 0 && value !== undefined)
+      .map(([meter, value]) => ({
+        key: meter,
+        icon: METER_ICONS[meter] || '⭐',
+        color: METER_COLORS[meter] || colors.textMuted,
+        value: value as number,
+      }));
+  }, [meters]);
+
+  if (meterEffects.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.previewOverlay}>
+      <View style={[styles.previewContainer, { borderColor: directionColor + '80' }]}>
+        <View style={styles.previewHeader}>
+          <Text style={[styles.previewArrow, { color: directionColor }]}>{arrow}</Text>
+          <Text style={[styles.previewTitle, { color: directionColor }]}>Effects</Text>
+        </View>
+        <View style={styles.previewEffects}>
+          {meterEffects.map((effect) => (
+            <View key={effect.key} style={styles.previewEffect}>
+              <Text style={styles.previewMeterIcon}>{effect.icon}</Text>
+              <Text
+                style={[
+                  styles.previewMeterValue,
+                  {
+                    color: effect.value > 0 ? colors.success : colors.error,
+                  },
+                ]}
+              >
+                {effect.value > 0 ? '+' : ''}
+                {effect.value}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
@@ -204,11 +267,16 @@ export function SwipeCard({ card, onCommit, textContext }: SwipeCardProps) {
   );
 
   // Swipe gesture hook
-  const { panResponder, animatedStyle, activeDirection } = useSwipeGesture({
+  const { panResponder, animatedStyle, activeDirectionState } = useSwipeGesture({
     onCommit,
     isOptionAvailable,
     enabled: true,
   });
+
+  // Get current swipe direction and corresponding meters
+  const currentDirection = activeDirectionState;
+  const currentMeters = currentDirection ? optionMap[currentDirection]?.meters : undefined;
+  const isSwipeActive = currentDirection !== null;
 
   return (
     <Animated.View
@@ -255,6 +323,13 @@ export function SwipeCard({ card, onCommit, textContext }: SwipeCardProps) {
           })}
         </View>
       </View>
+
+      {/* Swipe Preview Overlay */}
+      <SwipePreview
+        direction={currentDirection}
+        meters={currentMeters}
+        visible={isSwipeActive}
+      />
     </Animated.View>
   );
 }
@@ -386,6 +461,64 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
+  },
+
+  // Swipe Preview Overlay
+  previewOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.overlay,
+    borderRadius: borderRadius.xl,
+  },
+
+  previewContainer: {
+    backgroundColor: colors.surface + 'CC', // Semi-transparent
+    borderRadius: borderRadius.lg,
+    borderWidth: 2,
+    padding: spacing.lg,
+    minWidth: 200,
+    alignItems: 'center',
+  },
+
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+
+  previewArrow: {
+    fontSize: 24,
+    marginRight: spacing.sm,
+  },
+
+  previewTitle: {
+    ...typography.h3,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  previewEffects: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    justifyContent: 'center',
+  },
+
+  previewEffect: {
+    alignItems: 'center',
+    minWidth: 50,
+  },
+
+  previewMeterIcon: {
+    fontSize: 20,
+    marginBottom: spacing.xxs,
+  },
+
+  previewMeterValue: {
+    ...typography.label,
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
 
